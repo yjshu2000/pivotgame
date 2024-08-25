@@ -155,7 +155,7 @@ class PivotGame:
                     break
                 orb.moov(newlocx, newlocy)
                 
-                #check_collision(
+                self.targ.check_collision(orb)
             self.screen.update()
             sleep(self.SLEP)
             t += 1
