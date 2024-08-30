@@ -1,73 +1,40 @@
+import tkinter as tk
+import math
 
+def draw_clockwise_arrow(canvas, center_x, center_y, radius, start_angle, extent):
+    # Draw the arc
+    canvas.create_arc(center_x - radius, center_y - radius,
+                      center_x + radius, center_y + radius,
+                      start=start_angle, extent=extent,
+                      style=tk.ARC, width=2, outline='black')
+    
+    # Calculate the end position of the arc
+    end_angle = start_angle + extent
+    end_x = center_x + radius * math.cos(math.radians(end_angle))
+    end_y = center_y - radius * math.sin(math.radians(end_angle))
+    
+    # Calculate arrowhead points
+    arrow_length = 10  # Length of the arrowhead
+    arrow_angle1 = math.radians(end_angle + 30)  # Angle for the first line of the arrowhead
+    arrow_angle2 = math.radians(end_angle - 30)  # Angle for the second line of the arrowhead
+    
+    # Points for the lines
+    arrow_x1 = end_x + arrow_length * math.cos(arrow_angle1)
+    arrow_y1 = end_y - arrow_length * math.sin(arrow_angle1)
+    arrow_x2 = end_x + arrow_length * math.cos(arrow_angle2)
+    arrow_y2 = end_y - arrow_length * math.sin(arrow_angle2)
+    
+    # Draw the arrowhead as two lines
+    canvas.create_line(end_x, end_y, arrow_x1, arrow_y1, fill='black', width=2)
+    canvas.create_line(end_x, end_y, arrow_x2, arrow_y2, fill='black', width=2)
 
-
-from tkinter import *
-from math import sin, cos
-from time import *
-from random import *
-from mathextras import *
-WID = 800
-HEI = 800
-
-root = Tk()
-screen = Canvas(root, width=WID, height=HEI, background="snow")
-CENX = WID/2
-CENY = HEI/2
-dotsize = 8
-rotate = True
-
-def click(event):
-    global rotate
-    rotate = True
-    rotator(event.x, event.y)
-
-def released(event):
-    global rotate
-    rotate = False
-
-screen.bind("<Button-1>", click)
-screen.bind('<ButtonRelease-1>', released)
-
-screen.pack()
-screen.focus_set()
-
-
-newlocx = randint(50,WID-50)
-newlocy = randint(50,HEI-50)
-orb = screen.create_oval(newlocx - dotsize, newlocy - dotsize,
-                                newlocx + dotsize, newlocy + dotsize,
-                                fill = "red")
-
-def crash():
-    screen.create_text(WID/2, HEI/2, text = "you\ncrashed", font = "Tahoma 150",
-                       justify = "center", fill = "red")
-
-def rotator(x, y):
-    global orb, newlocx, newlocy
-    #test = 4.71 #okay so this is in radians from -> and CW
-    #oh, we need to find an angle. between two vectors:
-    #1st vector is (1,0)
-    #2nd vector needs to be converted: the one from (x,y) to (newlocx,newlocy)
-    #v = vectorize([x,y],[newlocx,newlocy])
-    v = vectorize([newlocx,newlocy],[x,y])
-    theta = angdif([1,0],v)
-    r = dist(x, y, newlocx, newlocy)
-    t = 0
-    while rotate:
-        screen.delete(orb)
-        newlocx = r * cos(t/20 + theta) + x  #...add phases here ig
-        newlocy = r * sin(t/20 + theta) + y  #...^
-        if ((newlocx < 0) or (newlocx > WID) or
-            (newlocy < 0) or (newlocy > HEI)):
-            crash()
-            break
-        orb = screen.create_oval(newlocx - dotsize, newlocy - dotsize,
-                                newlocx + dotsize, newlocy + dotsize,
-                                fill = "red")
-        screen.update()
-        sleep(0.01)
-        t += 1
-
-root.mainloop()
-
-
+# Example usage
+if __name__ == "__main__":
+    root = tk.Tk()
+    canvas = tk.Canvas(root, width=400, height=400)
+    canvas.pack()
+    
+    # Draw a clockwise circular arrow
+    draw_clockwise_arrow(canvas, 200, 200, 100, 45, 270)
+    
+    root.mainloop()

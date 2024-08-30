@@ -3,6 +3,11 @@ heyyyy we're back haha
 with all new oop approach :3
 ...also github hopefully.
 
+stuff to add:
+x put a big arrow in the middle indicating rotation direction, in the bg
+x change direction each click
+- add score counter
+- add new game restart (and make sure to fully end prev game)
 '''
 
 ##############################################################################
@@ -11,11 +16,10 @@ from random import randint
 import tkinter as tk
 from time import sleep
 import mathextras as pvm #pivot math? idk man i just want a short name
-from math import sin, cos
+from math import sin, cos, sqrt
 
 class Orbiter:
     """
-    Fields??
     x and y are coords of orb center
     obj is the created orb object (I really hope that works)
     theta and r are set on each click (as relative to pivot point)
@@ -77,6 +81,8 @@ class Target:
                                       fill = self.COLOUR)
 
     #check if self is colliding with one specific orb
+    #returns bool
+    #if collided, moves self to new location
     def check_collision(self, orb):
         d = pvm.dist(self.x, self.y, orb.x, orb.y)
         collided = d < (self.DOTSIZE + orb.DOTSIZE)
@@ -95,7 +101,63 @@ class Target:
         self.screen.move(self.obj, X - self.x, Y- self.y)
         self.x = X
         self.y = Y
-        
+
+class BGArrow:
+    """
+    just gimme the width and height of the screen!!
+    and the screen.
+    tuples: 0 is CCW, 1 is CW
+    """ #maybe add clr dependent on bgclr someday
+    def __init__(self, WIDTH, HEIGHT, Screen):
+        self.COLOUR = "snow3"
+        self.CENX = WIDTH // 2
+        self.CENY = HEIGHT // 2
+        self.RAD = min(WIDTH, HEIGHT) // 3
+        self.startang = (45, 225) #you better not change this...
+            #rest of the code kinda depends on startang being +/- 45
+        collapsed = int(sqrt(self.RAD ** 2 / 2)) #idk what to name it ok ToT
+        self.arwx0 = (self.CENX + collapsed,
+                      self.CENX - collapsed)
+        self.arwy0 = (self.CENY + collapsed,
+                      self.CENY + collapsed)
+        self.arwx1 = (self.arwx0[0] - self.RAD // 3,
+                      self.arwx0[1] + self.RAD // 3)
+        self.arwy1 = (self.arwy0[0], self.arwy0[1])
+        self.arwx2 = (self.arwx0[0], self.arwx0[1])
+        self.arwy2 = (self.arwy0[0] + self.RAD // 3,
+                      self.arwy0[1] + self.RAD // 3)
+        self.screen = Screen
+        self.dir = 0 #0 or 1
+        self.arc = self.screen.create_arc(
+            self.CENX - self.RAD, self.CENY - self.RAD,
+            self.CENX + self.RAD, self.CENY + self.RAD,
+            start = self.startang[self.dir], extent = 270, style = tk.ARC,
+            width = self.RAD // 10, outline = self.COLOUR, tag = "arrow")
+        self.arw = self.screen.create_line(
+            self.arwx1[self.dir], self.arwy1[self.dir],
+            self.arwx0[self.dir], self.arwy0[self.dir],
+            self.arwx2[self.dir], self.arwy2[self.dir],
+            fill = self.COLOUR, width = self.RAD // 10, tag = "arrow")
+
+    def flip(self):
+        self.screen.delete("arrow")
+        self.dir = 1 - self.dir #crazy toggle tysm cgpt
+        self.arc = self.screen.create_arc(
+            self.CENX - self.RAD, self.CENY - self.RAD,
+            self.CENX + self.RAD, self.CENY + self.RAD,
+            start = self.startang[self.dir], extent = 270, style = tk.ARC,
+            width = self.RAD // 10, outline = self.COLOUR, tag = "arrow")
+        self.arw = self.screen.create_line(
+            self.arwx1[self.dir], self.arwy1[self.dir],
+            self.arwx0[self.dir], self.arwy0[self.dir],
+            self.arwx2[self.dir], self.arwy2[self.dir],
+            fill = self.COLOUR, width = self.RAD // 10, tag = "arrow")
+        self.screen.tag_lower("arrow")
+
+#--------
+
+#class ScoreText:
+    #...
 
 #--------
 
@@ -110,6 +172,7 @@ class PivotGame:
         self.SLEP = 0.01
         #var
         self.rotate = True
+        self.clockwise = False
         self.orbiters = []
         #tkinter stuff
         self.root = root
@@ -119,7 +182,9 @@ class PivotGame:
         self.screen.bind('<ButtonRelease-1>', self.released)
         self.screen.pack()
         self.screen.focus_set()
-
+        
+        #initialize arrow
+        self.bgarrow = BGArrow(self.WIDTH, self.HEIGHT, self.screen)
         #initialize first orbiter
         self.orb = Orbiter(randint(50, self.WIDTH - 50),
                            randint(50, self.HEIGHT - 50), self.screen)
@@ -133,6 +198,8 @@ class PivotGame:
 
     def released(self, event):
         self.rotate = False
+        self.clockwise = not self.clockwise
+        self.bgarrow.flip()
 
     def crash(self):
         self.screen.create_text(self.WIDTH / 2, self.HEIGHT / 2,
@@ -143,20 +210,23 @@ class PivotGame:
         norbs = len(self.orbiters)
         for orb in self.orbiters:
             orb.set_theta_r(x, y)
-                    
         t = 0
         while self.rotate:
             for orb in self.orbiters:
-                newlocx = (orb.r * cos(t / 20 + orb.theta) + x)
-                newlocy = (orb.r * sin(t / 20 + orb.theta) + y)
+                if self.clockwise:
+                    newlocx = (orb.r * cos(t / 20 + orb.theta) + x)
+                    newlocy = (orb.r * sin(t / 20 + orb.theta) + y)
+                else:
+                    newlocx = (orb.r * cos(-t / 20 + orb.theta) + x)
+                    newlocy = (orb.r * sin(-t / 20 + orb.theta) + y)
                 if (newlocx < 0 or newlocx > self.WIDTH or
                     newlocy < 0 or newlocy > self.HEIGHT):
                     self.crash()
                     break
                 orb.moov(newlocx, newlocy)
-                
                 self.targ.check_collision(orb)
             self.screen.update()
+            
             sleep(self.SLEP)
             t += 1
         
