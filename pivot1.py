@@ -4,10 +4,9 @@ with all new oop approach :3
 ...also github hopefully.
 
 stuff to add:
-x put a big arrow in the middle indicating rotation direction, in the bg
-x change direction each click
-- add score counter
-- add new game restart (and make sure to fully end prev game)
+x add score counter
+x add new game restart (and make sure to fully end prev game)
+
 '''
 
 ##############################################################################
@@ -156,8 +155,22 @@ class BGArrow:
 
 #--------
 
-#class ScoreText:
-    #...
+class ScoreText:
+    """
+    JUST gimme the screen!!
+    """
+    def __init__(self, Screen):
+        self.COLOUR = "red"
+        self.screen = Screen
+        self.obj = self.screen.create_text(20, 20, text = str(0),
+                                           font = "Tahoma 24",
+                                           anchor = "nw", fill = self.COLOUR)
+
+    def update(self, newscore):
+        self.screen.delete(self.obj)
+        self.obj = self.screen.create_text(20, 20, text = str(newscore),
+                                           font = "Tahoma 24",
+                                           anchor = "nw", fill = self.COLOUR)
 
 #--------
 
@@ -173,38 +186,58 @@ class PivotGame:
         #var
         self.rotate = True
         self.clockwise = False
-        self.orbiters = []
         #tkinter stuff
         self.root = root
         self.screen = tk.Canvas(root, width = self.WIDTH, height = self.HEIGHT,
                                 background = self.BGCOLR)
         self.screen.bind("<Button-1>", self.click)
         self.screen.bind('<ButtonRelease-1>', self.released)
+        self.screen.bind("<space>", self.spacebar)
         self.screen.pack()
         self.screen.focus_set()
         
-        #initialize arrow
+        self.startgame()
+
+    def startgame(self):
+        self.ended = False
         self.bgarrow = BGArrow(self.WIDTH, self.HEIGHT, self.screen)
-        #initialize first orbiter
-        self.orb = Orbiter(randint(50, self.WIDTH - 50),
-                           randint(50, self.HEIGHT - 50), self.screen)
-        self.orbiters.append(self.orb)
-        #initialize first target
+        self.orbiters = [Orbiter(randint(50, self.WIDTH - 50),
+                           randint(50, self.HEIGHT - 50), self.screen)]
         self.targ = Target(self.WIDTH, self.HEIGHT, self.screen)
+        self.score = 0
+        self.scoretxt = ScoreText(self.screen)
 
     def click(self, event):
-        self.rotate = True
-        self.rotator(event.x, event.y)
+        if not self.ended:
+            self.rotate = True
+            self.rotator(event.x, event.y)
 
     def released(self, event):
-        self.rotate = False
-        self.clockwise = not self.clockwise
-        self.bgarrow.flip()
+        if not self.ended:
+            self.rotate = False
+            self.clockwise = not self.clockwise
+            self.bgarrow.flip()
+
+    def spacebar(self, event):
+        if self.ended:
+            self.screen.delete("all")
+            self.startgame()
 
     def crash(self):
-        self.screen.create_text(self.WIDTH / 2, self.HEIGHT / 2,
-                                text="you\ncrashed", font="Tahoma 150",
-                                justify="center", fill="red")
+        #we should probably update font sizes to be variable some time...
+        self.ended = True
+        self.screen.delete("all")
+        self.screen.create_text(self.WIDTH / 2, self.HEIGHT / 2 - 100,
+                                text = "you\ncrashed", font="Tahoma 150",
+                                justify = "center", fill = "red")
+        self.screen.create_text(self.WIDTH / 2, self.HEIGHT / 2 + 200,
+                                text = "press space to restart",
+                                font = "Tahoma 50", fill = "red")
+        self.screen.create_text(20, 20, text = "final score: " + str(self.score),
+                                font = "Tahoma 24",
+                                anchor = "nw", fill = "red")
+        self.screen.update()
+        
 
     def rotator(self, x, y):
         norbs = len(self.orbiters)
@@ -222,11 +255,12 @@ class PivotGame:
                 if (newlocx < 0 or newlocx > self.WIDTH or
                     newlocy < 0 or newlocy > self.HEIGHT):
                     self.crash()
-                    break
+                    return
                 orb.moov(newlocx, newlocy)
-                self.targ.check_collision(orb)
+                if self.targ.check_collision(orb):
+                    self.score += 1
+                    self.scoretxt.update(self.score)
             self.screen.update()
-            
             sleep(self.SLEP)
             t += 1
         
